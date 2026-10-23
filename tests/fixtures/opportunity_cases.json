@@ -1,0 +1,105 @@
+{
+  "schema_version": "resale-opportunity-contract-fixtures-v1",
+  "policy_version": "freshness-v1",
+  "evaluation_time": "2026-10-21T12:00:00Z",
+  "fixture_count": 18,
+  "provenance": {
+    "fixture_source_task": "t_462dc2f7",
+    "policy_source_task": "t_6932736a",
+    "policy_authority": "C:\\Users\\rvanb\\AppData\\Local\\hermes\\kanban\\attachments\\t_6932736a\\freshness-refusal-rules.md",
+    "limits": "This repository fixture list is not claimed to be an exact reconstruction of the unrecoverable t_462dc2f7 package. It preserves case identifiers, expected recommendations, and reason codes already present in the repository for executable contract coverage.",
+    "validation": "Veritas previously recorded 226/226 tests passing and no uncovered contract branches in t_a7992e01."
+  },
+  "cases": [
+    {
+      "id": "01_strong_valid_opportunity",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 12, "sold_snapshot_age_hours": 1, "volatility": "NORMAL", "net_profit": 28.0, "roi": 0.28, "margin": 0.175},
+      "expected": {"recommendation": "BUY_CANDIDATE", "reason_codes": ["ALL_REQUIRED_GATES_PASS"]}
+    },
+    {
+      "id": "02_stale_source_price",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_hours": 3, "stock_age_minutes": 8, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "RECHECK", "reason_codes": ["SOURCE_PRICE_NOT_CURRENT"]}
+    },
+    {
+      "id": "03_stale_stock_status",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_hours": 2, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "RECHECK", "reason_codes": ["STOCK_NOT_CURRENT"]}
+    },
+    {
+      "id": "04_exact_identifier_mismatch",
+      "input": {"identity": "conflicting", "identifier_match": false, "variation_match": true, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 45.0, "roi": 0.9},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["IDENTITY_NOT_PROVEN"]}
+    },
+    {
+      "id": "05_variation_pack_mismatch",
+      "input": {"identity": "conflicting", "identifier_match": true, "variation_match": false, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 15, "sold_snapshot_age_hours": 1, "net_profit": 37.0, "roi": 0.925},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["IDENTITY_NOT_PROVEN"]}
+    },
+    {
+      "id": "06_fees_destroy_apparent_margin",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 10, "sold_snapshot_age_hours": 1, "fees_destroy_margin": true, "net_profit": -5.75, "roi": -0.0575},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["ECONOMICS_FAIL"]}
+    },
+    {
+      "id": "07_shipping_destroy_margin",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 10, "sold_snapshot_age_hours": 1, "shipping_destroys_margin": true, "net_profit": -5.0, "roi": -0.05},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["ECONOMICS_FAIL"]}
+    },
+    {
+      "id": "08_insufficient_sold_evidence",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 2, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "WATCH", "reason_codes": ["SOLD_COUNT_BELOW_MINIMUM"]}
+    },
+    {
+      "id": "09_out_of_stock_source",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "OUT_OF_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["OUT_OF_STOCK"]}
+    },
+    {
+      "id": "10_high_price_volatility",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "volatility": "HIGH", "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "WATCH", "reason_codes": ["VOLATILITY_HIGH"]}
+    },
+    {
+      "id": "11_borderline_minimum_roi",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 20.0, "roi": 0.2},
+      "expected": {"recommendation": "BUY_CANDIDATE", "reason_codes": ["ALL_REQUIRED_GATES_PASS"]}
+    },
+    {
+      "id": "12_borderline_minimum_net_profit",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 20.0, "roi": 0.25},
+      "expected": {"recommendation": "BUY_CANDIDATE", "reason_codes": ["ALL_REQUIRED_GATES_PASS"]}
+    },
+    {
+      "id": "13_missing_critical_timestamp",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age": null, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "RECHECK", "reason_codes": ["SOURCE_PRICE_NOT_CURRENT"]}
+    },
+    {
+      "id": "14_inferred_only_resale_evidence",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_evidence": "INFERRED", "inferred_demand_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["DEMAND_EVIDENCE_UNAVAILABLE"]}
+    },
+    {
+      "id": "15_valid_watch",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 2, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "WATCH", "reason_codes": ["SOLD_COUNT_BELOW_MINIMUM"]}
+    },
+    {
+      "id": "16_valid_recheck",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_hours": 1, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 28.0, "roi": 0.28},
+      "expected": {"recommendation": "RECHECK", "reason_codes": ["SOURCE_PRICE_NOT_CURRENT"]}
+    },
+    {
+      "id": "17_valid_skip",
+      "input": {"identity": "conflicting", "identifier_match": false, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "sold_count": 12, "sold_snapshot_age_hours": 1, "net_profit": 60.0, "roi": 0.9},
+      "expected": {"recommendation": "SKIP", "reason_codes": ["IDENTITY_NOT_PROVEN"]}
+    },
+    {
+      "id": "18_valid_buy_candidate",
+      "input": {"identity": "exact", "identity_confidence": 0.99, "source_price_age_minutes": 8, "stock_age_minutes": 8, "stock": "IN_STOCK", "fees_age_hours": 1, "shipping_age_hours": 1, "sold_count": 12, "sold_snapshot_age_hours": 1, "volatility": "NORMAL", "net_profit": 28.0, "roi": 0.28, "margin": 0.175},
+      "expected": {"recommendation": "BUY_CANDIDATE", "reason_codes": ["ALL_REQUIRED_GATES_PASS"]}
+    }
+  ]
+}

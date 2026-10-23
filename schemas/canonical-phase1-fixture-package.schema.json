@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-resale-research.invalid/schemas/canonical-phase1-fixture-package.schema.json",
+  "title": "Canonical Phase 1 resale research fixture package",
+  "description": "Machine-readable contract for deterministic, offline Phase 1 fixtures. This schema is authoritative for the new canonical package; tests/fixtures/opportunity_cases.json and any older 10-case package are not authoritative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_version", "package_metadata", "evaluation", "fixtures"],
+  "properties": {
+    "schema_version": {"const": "canonical-phase1-fixture-package-v1"},
+    "policy_version": {"const": "freshness-v1"},
+    "package_metadata": {"$ref": "#/$defs/packageMetadata"},
+    "evaluation": {"$ref": "#/$defs/evaluationContext"},
+    "fixtures": {
+      "type": "array",
+      "minItems": 18,
+      "items": {"$ref": "#/$defs/fixtureCase"},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "ISO-8601 UTC timestamp. Offset forms other than Z are invalid so age calculations are deterministic.",
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 1, 2 and 12"
+    },
+    "nonEmpty": {"type": "string", "minLength": 1},
+    "currency": {"type": "string", "enum": ["USD"]},
+    "decimalMoney": {"type": "number", "minimum": 0, "multipleOf": 0.01},
+    "signedMoney": {"type": "number", "multipleOf": 0.01},
+    "ratio": {"type": "number", "minimum": -1, "maximum": 100},
+    "sourceKind": {
+      "type": "string",
+      "enum": ["official_api", "authenticated_manual", "licensed_third_party", "manual_fallback", "public_page"],
+      "description": "Source class is not a confidence score and cannot bypass freshness or access gates.",
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md section 4"
+    },
+    "timestampQuality": {
+      "type": "string",
+      "enum": ["PROVIDER_ASSERTED", "USER_ENTERED", "INFERRED", "MISSING"],
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md section 2"
+    },
+    "observationStatus": {
+      "type": "string",
+      "enum": ["LIVE", "FRESH", "AGING", "STALE", "MISSING", "CONFLICTING", "UNVERIFIED", "BLOCKED"],
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 2 and 3"
+    },
+    "availability": {"type": "string", "enum": ["AVAILABLE", "UNAVAILABLE", "BLOCKED"]},
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value", "observed_at", "retrieved_at", "source_kind", "source_id", "timestamp_quality", "status", "availability"],
+      "properties": {
+        "field": {"$ref": "#/$defs/nonEmpty"},
+        "value": {},
+        "currency": {"$ref": "#/$defs/currency"},
+        "observed_at": {"anyOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]},
+        "retrieved_at": {"anyOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]},
+        "source_kind": {"$ref": "#/$defs/sourceKind"},
+        "source_id": {"$ref": "#/$defs/nonEmpty"},
+        "timestamp_quality": {"$ref": "#/$defs/timestampQuality"},
+        "status": {"$ref": "#/$defs/observationStatus"},
+        "availability": {"$ref": "#/$defs/availability"},
+        "operator_id": {"$ref": "#/$defs/nonEmpty"},
+        "evidence_reference": {"$ref": "#/$defs/nonEmpty"},
+        "provider": {"$ref": "#/$defs/nonEmpty"},
+        "license_reference": {"$ref": "#/$defs/nonEmpty"},
+        "permitted_use_review": {"type": "string", "enum": ["APPROVED", "PENDING", "REJECTED", "NOT_APPLICABLE"]},
+        "notes": {"type": "string"}
+      },
+      "allOf": [
+        {"if": {"properties": {"source_kind": {"enum": ["authenticated_manual", "manual_fallback"]}}}, "then": {"required": ["operator_id", "evidence_reference"]}},
+        {"if": {"properties": {"source_kind": {"const": "licensed_third_party"}}}, "then": {"required": ["provider", "license_reference", "permitted_use_review"]}},
+        {"if": {"properties": {"availability": {"const": "UNAVAILABLE"}}}, "then": {"properties": {"value": {"type": "null"}}}},
+        {"if": {"properties": {"timestamp_quality": {"const": "MISSING"}}}, "then": {"properties": {"observed_at": {"type": "null"}}}}
+      ],
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 2, 4 and 9"
+    },
+    "packageMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "purpose", "authority", "fixture_package_status", "rule_origins"],
+      "properties": {
+        "name": {"const": "canonical-phase1-fixtures"},
+        "purpose": {"const": "offline deterministic contract execution"},
+        "authority": {"const": "docs/freshness-policy.md"},
+        "fixture_package_status": {"const": "NEW CANONICAL PACKAGE; not a reconstruction of legacy packages"},
+        "rule_origins": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^(PRESERVED|NEWLY DEFINED): .+"}},
+        "notes": {"type": "string"}
+      }
+    },
+    "evaluationContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluation_time", "timezone", "clock_skew_future_tolerance_seconds"],
+      "properties": {
+        "evaluation_time": {"$ref": "#/$defs/utcTimestamp"},
+        "timezone": {"const": "UTC"},
+        "clock_skew_future_tolerance_seconds": {"const": 300}
+      },
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 1 and 2"
+    },
+    "fixtureCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "source_observation", "resale_market_evidence", "identity_audit", "freshness_audit", "economics_inputs", "expected_calculations", "decision_audit"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{2,127}$"},
+        "description": {"$ref": "#/$defs/nonEmpty"},
+        "tags": {"type": "array", "items": {"$ref": "#/$defs/nonEmpty"}, "uniqueItems": true},
+        "source_observation": {"$ref": "#/$defs/sourceObservation"},
+        "resale_market_evidence": {"$ref": "#/$defs/resaleEvidence"},
+        "identity_audit": {"$ref": "#/$defs/identityAudit"},
+        "freshness_audit": {"$ref": "#/$defs/freshnessAudit"},
+        "economics_inputs": {"$ref": "#/$defs/economicsInputs"},
+        "expected_calculations": {"$ref": "#/$defs/expectedCalculations"},
+        "decision_audit": {"$ref": "#/$defs/decisionAudit"}
+      }
+    },
+    "sourceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marketplace", "url_or_reference", "product", "price", "stock", "observations"],
+      "properties": {
+        "marketplace": {"type": "string", "enum": ["Walmart", "Best Buy"]},
+        "url_or_reference": {"$ref": "#/$defs/nonEmpty"},
+        "product": {"$ref": "#/$defs/productIdentity"},
+        "price": {"$ref": "#/$defs/observation"},
+        "stock": {"$ref": "#/$defs/observation"},
+        "observations": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/observation"}}
+      },
+      "x-rule-origin": "PRESERVED: docs/phase1-contract.md section 4 and docs/freshness-policy.md sections 2-4"
+    },
+    "productIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_name", "brand", "model", "condition", "variation_attributes"],
+      "properties": {
+        "product_name": {"$ref": "#/$defs/nonEmpty"},
+        "brand": {"$ref": "#/$defs/nonEmpty"},
+        "model": {"$ref": "#/$defs/nonEmpty"},
+        "asin": {"$ref": "#/$defs/nonEmpty"},
+        "upc": {"$ref": "#/$defs/nonEmpty"},
+        "ean": {"$ref": "#/$defs/nonEmpty"},
+        "gtin": {"$ref": "#/$defs/nonEmpty"},
+        "manufacturer_part_number": {"$ref": "#/$defs/nonEmpty"},
+        "condition": {"type": "string", "enum": ["NEW", "USED", "REFURBISHED", "OPEN_BOX"]},
+        "variation_attributes": {"type": "object", "required": ["pack_quantity", "size", "color", "generation_or_version", "bundle_contents"], "additionalProperties": false, "properties": {"pack_quantity": {"type": "integer", "minimum": 1}, "size": {"type": "string"}, "color": {"type": "string"}, "generation_or_version": {"type": "string"}, "bundle_contents": {"type": "array", "items": {"$ref": "#/$defs/nonEmpty"}}}}
+      }
+    },
+    "resaleEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marketplace", "evidence_type", "sold_snapshot", "sold_comps", "active_market", "observations"],
+      "properties": {
+        "marketplace": {"const": "eBay"},
+        "evidence_type": {"type": "string", "enum": ["OBSERVED", "INFERRED", "ESTIMATED", "UNAVAILABLE"]},
+        "sold_snapshot": {"$ref": "#/$defs/observation"},
+        "sold_comps": {"type": "array", "items": {"$ref": "#/$defs/soldComp"}},
+        "active_market": {"$ref": "#/$defs/activeMarket"},
+        "observations": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/observation"}}
+      },
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 3 and 6"
+    },
+    "soldComp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "sale_date", "price", "condition", "identity_match", "is_asking_price"],
+      "properties": {
+        "reference": {"$ref": "#/$defs/nonEmpty"},
+        "sale_date": {"$ref": "#/$defs/utcTimestamp"},
+        "price": {"$ref": "#/$defs/decimalMoney"},
+        "condition": {"type": "string", "enum": ["NEW", "USED", "REFURBISHED", "OPEN_BOX"]},
+        "identity_match": {"const": true},
+        "is_asking_price": {"const": false},
+        "pack_quantity": {"type": "integer", "minimum": 1}
+      }
+    },
+    "activeMarket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active_listing_count", "seller_count", "observations"],
+      "properties": {
+        "active_listing_count": {"$ref": "#/$defs/observation"},
+        "seller_count": {"$ref": "#/$defs/observation"},
+        "observations": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/observation"}}
+      }
+    },
+    "identityAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "identity_confidence", "matched_fields", "conflicting_fields", "hard_conflict", "reason_codes", "evidence"],
+      "properties": {
+        "status": {"type": "string", "enum": ["VERIFIED", "HIGH", "MEDIUM", "LOW", "REJECT"]},
+        "identity_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "matched_fields": {"type": "array", "items": {"$ref": "#/$defs/nonEmpty"}},
+        "conflicting_fields": {"type": "array", "items": {"$ref": "#/$defs/nonEmpty"}},
+        "hard_conflict": {"type": "boolean"},
+        "reason_codes": {"type": "array", "items": {"$ref": "#/$defs/reasonCode"}, "uniqueItems": true},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/nonEmpty"}}
+      },
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md section 5"
+    },
+    "freshnessAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluation_time", "fields", "overall_status", "worst_status", "reason_codes"],
+      "properties": {
+        "evaluation_time": {"$ref": "#/$defs/utcTimestamp"},
+        "fields": {"type": "array", "minItems": 8, "items": {"$ref": "#/$defs/fieldFreshness"}},
+        "overall_status": {"$ref": "#/$defs/observationStatus"},
+        "worst_status": {"$ref": "#/$defs/observationStatus"},
+        "reason_codes": {"type": "array", "items": {"$ref": "#/$defs/reasonCode"}, "uniqueItems": true}
+      },
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 1-3"
+    },
+    "fieldFreshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "status", "observed_at", "retrieved_at", "age_seconds", "threshold_profile", "buy_gate_pass", "reason_codes"],
+      "properties": {
+        "field": {"$ref": "#/$defs/nonEmpty"},
+        "status": {"$ref": "#/$defs/observationStatus"},
+        "observed_at": {"anyOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]},
+        "retrieved_at": {"anyOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]},
+        "age_seconds": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "threshold_profile": {"type": "string", "enum": ["source_price", "stock", "sold_evidence", "active_competition", "seller_count", "fees", "shipping_estimate", "identity_evidence", "amazon_inferred_demand"]},
+        "buy_gate_pass": {"type": "boolean"},
+        "reason_codes": {"type": "array", "items": {"$ref": "#/$defs/reasonCode"}, "uniqueItems": true}
+      }
+    },
+    "economicsInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "acquisition_cost", "tax", "inbound_shipping", "outbound_shipping", "marketplace_fees", "payment_fees", "packaging", "return_allowance", "expected_resale_price", "min_net_profit", "min_roi", "min_margin", "rounding_scale"],
+      "properties": {
+        "currency": {"$ref": "#/$defs/currency"},
+        "acquisition_cost": {"$ref": "#/$defs/decimalMoney"},
+        "tax": {"$ref": "#/$defs/decimalMoney"},
+        "inbound_shipping": {"$ref": "#/$defs/decimalMoney"},
+        "outbound_shipping": {"$ref": "#/$defs/decimalMoney"},
+        "marketplace_fees": {"$ref": "#/$defs/decimalMoney"},
+        "payment_fees": {"$ref": "#/$defs/decimalMoney"},
+        "packaging": {"$ref": "#/$defs/decimalMoney"},
+        "return_allowance": {"$ref": "#/$defs/decimalMoney"},
+        "expected_resale_price": {"$ref": "#/$defs/decimalMoney"},
+        "min_net_profit": {"type": "number", "multipleOf": 0.01},
+        "min_roi": {"type": "number", "minimum": 0},
+        "min_margin": {"type": "number", "minimum": 0},
+        "rounding_scale": {"const": 2}
+      },
+      "x-rule-origin": "PRESERVED fields; NEWLY DEFINED: explicit numeric economics threshold and rounding fields required by docs/freshness-policy.md section 7 and docs/phase1-contract.md section 4"
+    },
+    "expectedCalculations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_cost", "expected_net_profit", "break_even_resale_price", "roi", "margin", "capital_at_risk", "rounding_mode", "calculation_status"],
+      "properties": {
+        "total_cost": {"$ref": "#/$defs/signedMoney"},
+        "expected_net_profit": {"$ref": "#/$defs/signedMoney"},
+        "break_even_resale_price": {"$ref": "#/$defs/signedMoney"},
+        "roi": {"type": "number"},
+        "margin": {"type": "number"},
+        "capital_at_risk": {"$ref": "#/$defs/signedMoney"},
+        "rounding_mode": {"const": "ROUND_HALF_UP_2DP"},
+        "calculation_status": {"type": "string", "enum": ["COMPLETE", "INCOMPLETE", "BLOCKED"]}
+      },
+      "x-rule-origin": "PRESERVED required outputs: docs/phase1-contract.md section 4; NEWLY DEFINED: named rounding mode for deterministic fixture comparison"
+    },
+    "decisionAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_recommendation", "expected_reason_codes", "hard_gates", "human_recheck", "confidence", "refusal", "first_failing_gate"],
+      "properties": {
+        "expected_recommendation": {"type": "string", "enum": ["BUY_CANDIDATE", "WATCH", "RECHECK", "SKIP"]},
+        "expected_reason_codes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/reasonCode"}, "uniqueItems": true},
+        "hard_gates": {"$ref": "#/$defs/hardGates"},
+        "human_recheck": {"$ref": "#/$defs/humanRecheck"},
+        "confidence": {"type": "integer", "minimum": 0, "maximum": 100},
+        "refusal": {"type": "boolean"},
+        "first_failing_gate": {"anyOf": [{"$ref": "#/$defs/nonEmpty"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {"if": {"properties": {"expected_recommendation": {"const": "BUY_CANDIDATE"}}}, "then": {"properties": {"hard_gates": {"properties": {"all_required_gates_pass": {"const": true}}}, "human_recheck": {"properties": {"required": {"const": true}, "items": {"contains": {"const": "final source price and stock recheck required before purchase"}}}}}}},
+        {"if": {"properties": {"expected_recommendation": {"const": "BUY_CANDIDATE"}}}, "then": {"properties": {"first_failing_gate": {"type": "null"}, "refusal": {"const": false}}}}
+      ],
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 7, 8, 11 and 12"
+    },
+    "hardGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["access_allowed", "identity_proven", "required_freshness_pass", "source_price_current", "stock_current", "cost_inputs_current", "resale_evidence_pass", "market_context_current", "economics_pass", "volatility_resolved", "confidence_minimum_pass", "all_required_gates_pass"],
+      "properties": {
+        "access_allowed": {"type": "boolean"},
+        "identity_proven": {"type": "boolean"},
+        "required_freshness_pass": {"type": "boolean"},
+        "source_price_current": {"type": "boolean"},
+        "stock_current": {"type": "boolean"},
+        "cost_inputs_current": {"type": "boolean"},
+        "resale_evidence_pass": {"type": "boolean"},
+        "market_context_current": {"type": "boolean"},
+        "economics_pass": {"type": "boolean"},
+        "volatility_resolved": {"type": "boolean"},
+        "confidence_minimum_pass": {"type": "boolean"},
+        "all_required_gates_pass": {"type": "boolean"}
+      },
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md sections 6-8"
+    },
+    "humanRecheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "items"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/nonEmpty"}, "uniqueItems": true}
+      },
+      "x-rule-origin": "PRESERVED: docs/phase1-contract.md section 5; BUY_CANDIDATE message requirement from docs/freshness-policy.md section 7"
+    },
+    "reasonCode": {
+      "type": "string",
+      "enum": ["ACCESS_BLOCKED", "IDENTITY_NOT_PROVEN", "IDENTITY_CONFLICT", "SOURCE_PRICE_NOT_CURRENT", "STOCK_NOT_CURRENT", "OUT_OF_STOCK", "SOLD_EVIDENCE_UNAVAILABLE", "SOLD_EVIDENCE_STALE", "SOLD_COUNT_BELOW_MINIMUM", "DEMAND_EVIDENCE_UNAVAILABLE", "MARKET_CONTEXT_NOT_CURRENT", "COST_INPUT_NOT_CURRENT", "SOURCE_PRICE_CONFLICT", "ECONOMICS_FAIL", "VOLATILITY_HIGH", "ALL_REQUIRED_GATES_PASS"],
+      "x-rule-origin": "PRESERVED: docs/freshness-policy.md section 11"
+    }
+  }
+}

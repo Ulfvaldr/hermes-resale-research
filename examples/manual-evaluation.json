@@ -1,0 +1,40 @@
+{
+  "now": "2026-10-22T12:00:00Z",
+  "source_candidate": {
+    "source_marketplace": "manual",
+    "source_url": "https://example.test/item",
+    "product_name": "Widget Pro",
+    "brand": "Acme",
+    "model": "W-1",
+    "upc": "123",
+    "condition": "NEW",
+    "source_price": "40",
+    "stock_status": "IN_STOCK",
+    "source_observed_at": "2026-10-22T11:50:00Z",
+    "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+  },
+  "resale_evidence": {
+    "resale_marketplace": "eBay",
+    "product_name": "Widget Pro",
+    "brand": "Acme",
+    "model": "W-1",
+    "upc": "123",
+    "condition": "NEW",
+    "recent_sold_median": "60",
+    "sold_count": 5,
+    "sold_window_days": 90,
+    "active_listing_count": 10,
+    "seller_count": 4,
+    "evidence_observed_at": "2026-10-22T11:50:00Z",
+    "evidence_type": "OBSERVED",
+    "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+    "fees_observed_at": "2026-10-22T11:50:00Z",
+    "shipping_observed_at": "2026-10-22T11:50:00Z"
+  },
+  "assumptions": {
+    "acquisition_cost": "30", "tax": "3", "inbound_shipping": "0",
+    "outbound_shipping": "5", "marketplace_fees": "9",
+    "payment_fees": "2", "packaging": "1", "return_allowance": "1",
+    "expected_resale_price": "71"
+  }
+}
