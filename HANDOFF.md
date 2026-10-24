@@ -8,9 +8,13 @@ The offline sample run remains usable without n8n, marketplace credentials, or n
 
 The batch output is a bounded JSON/Markdown report with ranked eligible items and a rejected audit. It carries product/source economics, recommendation, confidence, evidence quality, explanation, failed gates, reason codes, source/resale provenance, `eligible`, `research_only`, and `human_approval_required`. Invalid, duplicate, stale, identity-conflicting, out-of-stock, or sold-evidence-incomplete candidates are handled fail-closed; active asking prices cannot satisfy the sold-evidence gate.
 
+The local candidates viewer is now available at `src/hermes_resale_research/viewer.py`. Run `PYTHONPATH=src python -m hermes_resale_research.viewer --demo` for the credential-free synthetic path, or pass `--report <local-phase2-report.json>` to display an existing Phase 2 JSON result. It only renders the report: it preserves item order, shows unavailable values explicitly, and keeps rejected/skipped records and provenance visible. It does not run business logic in report mode, call external services, write back, purchase, checkout, or list.
+
+The viewer is intentionally separate from n8n and the evaluator. n8n may orchestrate the batch, and the Python Phase 1/Phase 2 runtime remains authoritative for identity, evidence, freshness, economics, ranking, and recommendations. If no Phase 2 report exists, generate one with `PYTHONPATH=src python -m hermes_resale_research examples/phase2-demo-candidates.json --batch --limit 10 > report.json`; if `items` is empty, inspect `rejected` rather than inferring or repairing a recommendation. See `docs/phase2-viewer-setup.md` for troubleshooting.
+
 ## Validation reported by implementation work
 
-- `PYTHONPATH=src python -m unittest discover -s tests` — 33 tests passed.
+- `PYTHONPATH=src python -m unittest discover -s tests` — 36 tests passed.
 - `PYTHONPATH=src python -m hermes_resale_research examples/phase2-demo-candidates.json --batch --limit 10 --markdown` — sample report rendered with 7 evaluated, 4 presented, and 3 rejected candidates.
 - `python -m json.tool n8n/workflows/daily-candidate-workflow.json` — workflow JSON validated.
 - `git diff --check` — passed.
@@ -22,7 +26,7 @@ Independent validation subsequently passed the same checks, including 18 canonic
 
 ## Architecture boundary
 
-Hermes handles orchestration, n8n handles optional visual integration, and the Hermes Resale Python runtime remains authoritative for deterministic evaluation. n8n must not reimplement scoring, economics, freshness, or recommendation rules. A human makes the final decision.
+Hermes handles orchestration, n8n handles optional visual integration, the local viewer presents completed reports, and the Hermes Resale Python runtime remains authoritative for deterministic evaluation. n8n and the viewer must not reimplement scoring, economics, freshness, identity, ranking, or recommendation rules. A human makes the final decision.
 
 ## Human control gate
 

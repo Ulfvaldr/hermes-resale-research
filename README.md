@@ -1,6 +1,6 @@
 # Hermes Resale Research
 
-A research-only Phase 1 workflow plus a bounded Phase 2 daily candidate batch for evaluating resale opportunities from structured source and marketplace evidence. The repository contains deterministic contracts, policy documents, synthetic fixtures, and an optional local n8n transport. It does not contain marketplace credentials, cookies, live responses, purchasing automation, listing automation, or dashboard UI.
+A research-only Phase 1 workflow plus a bounded Phase 2 daily candidate batch for evaluating resale opportunities from structured source and marketplace evidence. The repository contains deterministic contracts, policy documents, synthetic fixtures, an optional local n8n transport, and a local read-only candidates viewer. It does not contain marketplace credentials, cookies, live responses, purchasing automation, listing automation, or a marketplace operations dashboard; the viewer only presents completed local Phase 2 reports.
 
 ## Architecture
 
@@ -23,6 +23,7 @@ The Python runtime is the source of truth for identity, freshness, evidence vali
 - `examples/phase2-demo-candidates.json` — credential-free daily batch fixture.
 - `n8n/workflows/daily-candidate-workflow.json` — importable n8n visual orchestration workflow.
 - `PHASE_2_ARCHITECTURE.md` — Phase 2 component boundary, safety contract, and operating model.
+- `docs/phase2-viewer-setup.md` — local viewer setup, input modes, and troubleshooting.
 - `PROJECT_STATUS.md` — current milestone status and known limitations.
 - `HANDOFF.md` — validation-backed handoff and recommended next steps.
 
@@ -69,6 +70,20 @@ PYTHONPATH=src python -m hermes_resale_research examples/phase2-demo-candidates.
 ```
 
 The report is titled `Today's Resale Opportunity Candidates`. It shows ranked evidence-backed items and a rejected audit section. `research_only` and `human_approval_required` are always true; this repository has no purchase or listing command.
+
+### Local candidates viewer
+
+Serve the credential-free synthetic viewer with Python 3.11+:
+
+```bash
+PYTHONPATH=src python -m hermes_resale_research.viewer --demo
+```
+
+Then open `http://127.0.0.1:8765/`. To view an existing local Phase 2 JSON report without running any evaluation logic, use `--report path/to/report.json` instead. The viewer validates the read-only safety flags, preserves Phase 2 item order, renders unavailable values explicitly, and exposes provenance/reason codes in expandable sections. It makes no network requests and has no purchase, listing, checkout, or write-back behavior. Stop it with Ctrl-C.
+
+The viewer has exactly two input modes: `--demo` runs the checked-in synthetic fixture through the existing Phase 2 batch CLI, while `--report` reads one JSON report already produced by that CLI. It does not discover files, call n8n, fetch marketplace pages, or calculate scores/economics. The report must contain `research_only: true` and `human_approval_required: true`; a missing, malformed, or unsafe report stops with an error instead of being partially displayed. A report with no ranked `items` is valid: use the rejected/skipped audit section to see why candidates failed, such as unavailable or stale sold evidence, identity failure, price/stock staleness, or out-of-stock status. See `docs/phase2-viewer-setup.md` for a copy/paste workflow and troubleshooting.
+
+The page is a read-only review aid, not an execution console. It cannot purchase, checkout, order, pay, or list an item, and it never replaces n8n orchestration or the Phase 1/Phase 2 business logic. The human remains responsible for checking evidence, identity, freshness, economics, current price/stock, and approval before any external action.
 
 ### Batch output contract
 

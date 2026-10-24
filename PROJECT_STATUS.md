@@ -25,11 +25,19 @@ The imported workflow uses `examples/phase2-demo-candidates.json`, runs inactive
 
 ## Current validation state
 
-The Phase 2 batch implementation reports 33 unit tests passing, plus the existing n8n client and canonical fixture checks. Independent validation also confirmed the sample result shape (7 evaluated, 4 ranked, 3 rejected), deterministic ranking, evidence/provenance fields, canonical 18-fixture checks, CLI output, and workflow JSON structure. Re-run `PYTHONPATH=src python -m unittest discover -s tests -q`, the sample batch command, the canonical contract probe, `python -m json.tool n8n/workflows/daily-candidate-workflow.json`, and `git diff --check` against the final repository state before issuing a final acceptance verdict.
+The Phase 2 batch implementation reports 36 unit tests passing, plus the existing n8n client and canonical fixture checks. Independent validation also confirmed the sample result shape (7 evaluated, 4 ranked, 3 rejected), deterministic ranking, evidence/provenance fields, canonical 18-fixture checks, CLI output, and workflow JSON structure. Re-run `PYTHONPATH=src python -m unittest discover -s tests -q`, the sample batch command, the canonical contract probe, `python -m json.tool n8n/workflows/daily-candidate-workflow.json`, and `git diff --check` against the final repository state before issuing a final acceptance verdict.
+
+## Local candidates viewer
+
+The local viewer in `src/hermes_resale_research/viewer.py` is a thin, read-only presentation layer over a Phase 2 JSON report. `--demo` runs `examples/phase2-demo-candidates.json` through the existing batch CLI with no credentials, network, n8n, or database. `--report path/to/report.json` loads an already-generated local report and does not rerun evaluation. Both modes require the report safety contract (`research_only=true` and `human_approval_required=true`); malformed or unsafe input fails closed.
+
+Start it from the repository root with `PYTHONPATH=src python -m hermes_resale_research.viewer --demo`, then browse to `http://127.0.0.1:8765/`. Use `--host` and `--port` only when a different local bind is needed. The page preserves Phase 2 ranking order, displays null/missing evidence as `Unavailable`, and keeps rejected/skipped records in a separate audit section with provenance, failed gates, and reason codes. It does not sort, score, estimate, fetch links, write reports, purchase, checkout, or list.
+
+If Phase 2 output is unavailable, generate it first with `PYTHONPATH=src python -m hermes_resale_research examples/phase2-demo-candidates.json --batch --limit 10 > report.json`, then pass `--report report.json`. If the report has no `items`, the evaluator found no evidence-backed candidates that passed presentation filters; inspect `rejected`. Do not “fix” missing evidence in the viewer or substitute active asking prices for sold evidence. Detailed setup and troubleshooting are in `docs/phase2-viewer-setup.md`.
 
 ## Boundaries and limitations
 
-Hermes handles orchestration, n8n handles optional visual integration, and the Python runtime is the deterministic source of truth. n8n must not duplicate scoring, economics, freshness, or recommendation logic. Synthetic fixtures are not live market data, sold evidence remains manual or separately approved, and a human remains the final decision-maker.
+Hermes handles orchestration, n8n handles optional visual integration, the Python runtime is the deterministic source of truth, and the local viewer only presents completed Phase 2 output. n8n and the viewer must not duplicate scoring, economics, freshness, identity, or recommendation logic. Synthetic fixtures are not live market data, sold evidence remains manual or separately approved, and a human remains the final decision-maker.
 
 No commit, merge, or push has been performed. Do not merge or push these changes without explicit human approval. Keep credentials, cookies, tokens, marketplace responses, and local runtime state out of the repository.
 

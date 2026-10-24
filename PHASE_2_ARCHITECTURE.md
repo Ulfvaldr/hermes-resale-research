@@ -13,9 +13,12 @@ sample or approved adapter input
         -> deterministic rank + rejected audit
         -> JSON or Markdown presentation
         -> optional local n8n transport/orchestration
+        -> optional local read-only candidates viewer
 ```
 
 `src/hermes_resale_research/batch.py` owns bounded selection, adapter error capture, presentation fields, deterministic ordering, and rejected-candidate retention. `workflow.py` remains authoritative for identity, freshness, evidence, economics, score, reason codes, and recommendation. n8n transports and presents; it must not duplicate those rules.
+
+`src/hermes_resale_research/viewer.py` is downstream of the JSON report. In `--report` mode it loads and validates the safety envelope, preserves the `items` array order, and renders values/provenance without recalculation. In `--demo` mode it invokes the existing batch CLI against the checked-in synthetic fixture. The viewer is not another evaluator, scheduler, source adapter, or n8n replacement.
 
 ## Safety and fail-closed contract
 
@@ -36,7 +39,9 @@ The importable workflow is inactive sample mode with the exact sequence `Trigger
 
 ## Validation and known limitations
 
-Phase 2 implementation and independent review reported 33 unit tests passing, canonical 18-fixture checks passing, deterministic sample output of 7 evaluated/4 ranked/3 rejected, valid workflow JSON, and a simulated n8n command path. Live n8n import/execution and live marketplace acquisition were not performed. Synthetic fixtures are not market data, sold evidence remains manual or separately approved, and provider terms/credentials are unresolved until a future adapter is approved.
+Phase 2 implementation and independent review reported 36 unit tests passing, canonical 18-fixture checks passing, deterministic sample output of 7 evaluated/4 ranked/3 rejected, valid workflow JSON, and a simulated n8n command path. Live n8n import/execution and live marketplace acquisition were not performed. Synthetic fixtures are not market data, sold evidence remains manual or separately approved, and provider terms/credentials are unresolved until a future adapter is approved.
+
+For viewer operation, start from the repository root with Python 3.11+: `PYTHONPATH=src python -m hermes_resale_research.viewer --demo`. For a real local report, generate or obtain Phase 2 JSON first and use `--report`; an absent/malformed report or false/missing safety flag is an operator error, not a reason to add fallback scoring. Null evidence remains `Unavailable`, and rejected records remain separate for audit.
 
 ## Human control
 
