@@ -66,4 +66,6 @@ def post_evaluation(payload: Mapping[str, Any], *, url: str | None = None,
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return N8nResponse(False, status, error={"code": "MALFORMED_RESPONSE", "message": "n8n response was not valid JSON"})
+    if not isinstance(data, dict):
+        return N8nResponse(False, status, error={"code": "MALFORMED_RESPONSE", "message": "n8n response must be a JSON object"})
     return N8nResponse(True, status, data=data)

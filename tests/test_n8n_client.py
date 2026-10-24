@@ -38,6 +38,12 @@ class N8nClientTests(unittest.TestCase):
         with patch("hermes_resale_research.n8n_client.urlopen", return_value=_Response(b"not-json")):
             self.assertEqual(post_evaluation({}).error["code"], "MALFORMED_RESPONSE")
 
+    def test_non_object_response_fails_closed(self):
+        with patch("hermes_resale_research.n8n_client.urlopen", return_value=_Response(b'["not", "an", "object"]')):
+            result = post_evaluation({})
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error["code"], "MALFORMED_RESPONSE")
+
     def test_endpoint_is_configurable(self):
         with patch.dict(os.environ, {"N8N_RESALE_WEBHOOK_URL": "http://custom/hook"}):
             self.assertEqual(webhook_url(), "http://custom/hook")
