@@ -1,0 +1,367 @@
+{
+  "schema_note": "Phase 2 demo/sample candidate batch. SYNTHETIC fixtures only: no live market data, no real products, no credentials. Each candidate is a complete Phase 1 evaluate_opportunity input (source_candidate + resale_evidence + assumptions) plus a discovery reference and a documented expected outcome.",
+  "policy_version": "freshness-v1",
+  "demo_now": "2026-10-24T12:00:00Z",
+  "timezone": "UTC",
+  "purpose": "Demonstrates the full recommendation label set (BUY_CANDIDATE, RECHECK, WATCH, SKIP) and fail-closed behavior for missing/stale/conflicting evidence. Run through src/hermes_resale_research.workflow.evaluate_opportunity.",
+  "candidates": [
+    {
+      "candidate_id": "demo-01-valid-buy",
+      "label": "Complete, current evidence -> BUY_CANDIDATE",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Walmart (manual observation)",
+        "url": "https://example.test/walmart/widget-pro",
+        "observed_at": "2026-10-24T11:52:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/walmart/widget-pro",
+        "product_name": "Widget Pro",
+        "brand": "Acme",
+        "model": "W-1",
+        "upc": "123",
+        "condition": "NEW",
+        "source_price": "40",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Widget Pro",
+        "brand": "Acme",
+        "model": "W-1",
+        "upc": "123",
+        "condition": "NEW",
+        "recent_sold_median": "60",
+        "sold_count": 5,
+        "sold_window_days": 90,
+        "active_listing_count": 10,
+        "seller_count": 4,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "30", "tax": "3", "inbound_shipping": "0",
+        "outbound_shipping": "5", "marketplace_fees": "9",
+        "payment_fees": "2", "packaging": "1", "return_allowance": "1",
+        "expected_resale_price": "72"
+      },
+      "expected_outcome": {"recommendation": "BUY_CANDIDATE", "reason_codes": ["ALL_REQUIRED_GATES_PASS"]}
+    },
+    {
+      "candidate_id": "demo-02-stale-source-price",
+      "label": "Source price 3h old -> RECHECK (fail closed, no BUY)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Best Buy (manual observation)",
+        "url": "https://example.test/bestbuy/nitro-blender",
+        "observed_at": "2026-10-24T09:00:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/bestbuy/nitro-blender",
+        "product_name": "Nitro Blender",
+        "brand": "KitchenCo",
+        "model": "NB-1200",
+        "upc": "190000000002",
+        "condition": "NEW",
+        "source_price": "55",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {
+          "operator_id": "local-demo",
+          "timestamp_quality": "PROVIDER_ASSERTED",
+          "price_observed_at": "2026-10-24T09:00:00Z",
+          "stock_observed_at": "2026-10-24T11:52:00Z"
+        }
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Nitro Blender",
+        "brand": "KitchenCo",
+        "model": "NB-1200",
+        "upc": "190000000002",
+        "condition": "NEW",
+        "recent_sold_median": "85",
+        "sold_count": 6,
+        "sold_window_days": 90,
+        "active_listing_count": 12,
+        "seller_count": 5,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "45", "tax": "4", "inbound_shipping": "0",
+        "outbound_shipping": "8", "marketplace_fees": "12",
+        "payment_fees": "3", "packaging": "1", "return_allowance": "2",
+        "expected_resale_price": "100"
+      },
+      "expected_outcome": {"recommendation": "RECHECK", "reason_codes": ["SOURCE_PRICE_NOT_CURRENT"]}
+    },
+    {
+      "candidate_id": "demo-03-stale-stock",
+      "label": "Stock observation 2h old -> RECHECK (fail closed)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Walmart (manual observation)",
+        "url": "https://example.test/walmart/pulse-earbuds",
+        "observed_at": "2026-10-24T10:00:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/walmart/pulse-earbuds",
+        "product_name": "Pulse Earbuds",
+        "brand": "AudioZen",
+        "model": "PE-2",
+        "upc": "190000000003",
+        "condition": "NEW",
+        "source_price": "22",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {
+          "operator_id": "local-demo",
+          "timestamp_quality": "PROVIDER_ASSERTED",
+          "price_observed_at": "2026-10-24T11:52:00Z",
+          "stock_observed_at": "2026-10-24T10:00:00Z"
+        }
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Pulse Earbuds",
+        "brand": "AudioZen",
+        "model": "PE-2",
+        "upc": "190000000003",
+        "condition": "NEW",
+        "recent_sold_median": "38",
+        "sold_count": 8,
+        "sold_window_days": 90,
+        "active_listing_count": 20,
+        "seller_count": 9,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "18", "tax": "1", "inbound_shipping": "0",
+        "outbound_shipping": "4", "marketplace_fees": "6",
+        "payment_fees": "1", "packaging": "1", "return_allowance": "1",
+        "expected_resale_price": "55"
+      },
+      "expected_outcome": {"recommendation": "RECHECK", "reason_codes": ["STOCK_NOT_CURRENT"]}
+    },
+    {
+      "candidate_id": "demo-04-missing-sold-evidence",
+      "label": "Active listings only, no sold comps -> SKIP (asking never = sold)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Best Buy (manual observation)",
+        "url": "https://example.test/bestbuy/summit-bottle",
+        "observed_at": "2026-10-24T11:52:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/bestbuy/summit-bottle",
+        "product_name": "Summit Water Bottle",
+        "brand": "TrailGear",
+        "model": "SWB-32",
+        "upc": "190000000004",
+        "condition": "NEW",
+        "source_price": "12",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Summit Water Bottle",
+        "brand": "TrailGear",
+        "model": "SWB-32",
+        "upc": "190000000004",
+        "condition": "NEW",
+        "recent_sold_median": null,
+        "sold_count": null,
+        "sold_window_days": null,
+        "active_listing_count": 14,
+        "seller_count": 7,
+        "evidence_observed_at": null,
+        "evidence_type": "UNAVAILABLE",
+        "provenance": {
+          "reason": "LIVE_SOLD_EVIDENCE_NOT_CONFIGURED",
+          "active_observed_at": "2026-10-24T11:40:00Z",
+          "seller_observed_at": "2026-10-24T11:40:00Z",
+          "timestamp_quality": "PROVIDER_ASSERTED"
+        },
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "9", "tax": "1", "inbound_shipping": "0",
+        "outbound_shipping": "3", "marketplace_fees": "3",
+        "payment_fees": "1", "packaging": "1", "return_allowance": "1",
+        "expected_resale_price": "40"
+      },
+      "expected_outcome": {"recommendation": "SKIP", "reason_codes": ["SOLD_EVIDENCE_UNAVAILABLE"]}
+    },
+    {
+      "candidate_id": "demo-05-identity-mismatch",
+      "label": "Source vs resale UPC conflict -> SKIP (identity not proven)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Walmart (manual observation)",
+        "url": "https://example.test/walmart/echo-bulb",
+        "observed_at": "2026-10-24T11:52:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/walmart/echo-bulb",
+        "product_name": "Echo Smart Bulb",
+        "brand": "BrightHome",
+        "model": "ESB-4",
+        "upc": "190000000005",
+        "condition": "NEW",
+        "source_price": "9",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Echo Smart Bulb",
+        "brand": "BrightHome",
+        "model": "ESB-4",
+        "upc": "190000009999",
+        "condition": "NEW",
+        "recent_sold_median": "18",
+        "sold_count": 4,
+        "sold_window_days": 90,
+        "active_listing_count": 30,
+        "seller_count": 11,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "7", "tax": "1", "inbound_shipping": "0",
+        "outbound_shipping": "3", "marketplace_fees": "3",
+        "payment_fees": "1", "packaging": "1", "return_allowance": "1",
+        "expected_resale_price": "40"
+      },
+      "expected_outcome": {"recommendation": "SKIP", "reason_codes": ["IDENTITY_NOT_PROVEN"]}
+    },
+    {
+      "candidate_id": "demo-06-low-sold-count",
+      "label": "Only 1 sold comp (below 3) -> WATCH (not yet BUY)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Best Buy (manual observation)",
+        "url": "https://example.test/bestbuy/flash-bank",
+        "observed_at": "2026-10-24T11:52:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/bestbuy/flash-bank",
+        "product_name": "Flash Power Bank",
+        "brand": "ChargeLab",
+        "model": "FPB-20K",
+        "upc": "190000000006",
+        "condition": "NEW",
+        "source_price": "16",
+        "stock_status": "IN_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Flash Power Bank",
+        "brand": "ChargeLab",
+        "model": "FPB-20K",
+        "upc": "190000000006",
+        "condition": "NEW",
+        "recent_sold_median": "26",
+        "sold_count": 1,
+        "sold_window_days": 90,
+        "active_listing_count": 9,
+        "seller_count": 6,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "12", "tax": "1", "inbound_shipping": "0",
+        "outbound_shipping": "4", "marketplace_fees": "5",
+        "payment_fees": "1", "packaging": "1", "return_allowance": "1",
+        "expected_resale_price": "46"
+      },
+      "expected_outcome": {"recommendation": "WATCH", "reason_codes": ["SOLD_COUNT_BELOW_MINIMUM"]}
+    },
+    {
+      "candidate_id": "demo-07-out-of-stock",
+      "label": "Source out of stock -> SKIP (OUT_OF_STOCK)",
+      "discovery": {
+        "source": "manual-import",
+        "store": "Walmart (manual observation)",
+        "url": "https://example.test/walmart/nitro-blender",
+        "observed_at": "2026-10-24T11:52:00Z",
+        "discovery_source_kind": "manual_fallback"
+      },
+      "source_candidate": {
+        "source_marketplace": "manual",
+        "source_url": "https://example.test/walmart/nitro-blender",
+        "product_name": "Nitro Blender",
+        "brand": "KitchenCo",
+        "model": "NB-1200",
+        "upc": "190000000002",
+        "condition": "NEW",
+        "source_price": "55",
+        "stock_status": "OUT_OF_STOCK",
+        "source_observed_at": "2026-10-24T11:52:00Z",
+        "provenance": {"operator_id": "local-demo", "timestamp_quality": "PROVIDER_ASSERTED"}
+      },
+      "resale_evidence": {
+        "resale_marketplace": "eBay",
+        "product_name": "Nitro Blender",
+        "brand": "KitchenCo",
+        "model": "NB-1200",
+        "upc": "190000000002",
+        "condition": "NEW",
+        "recent_sold_median": "85",
+        "sold_count": 6,
+        "sold_window_days": 90,
+        "active_listing_count": 12,
+        "seller_count": 5,
+        "evidence_observed_at": "2026-10-24T11:40:00Z",
+        "evidence_type": "OBSERVED",
+        "provenance": {"source": "manual:local-demo", "timestamp_quality": "PROVIDER_ASSERTED"},
+        "fees_observed_at": "2026-10-24T11:50:00Z",
+        "shipping_observed_at": "2026-10-24T11:50:00Z"
+      },
+      "assumptions": {
+        "acquisition_cost": "45", "tax": "4", "inbound_shipping": "0",
+        "outbound_shipping": "8", "marketplace_fees": "12",
+        "payment_fees": "3", "packaging": "1", "return_allowance": "2",
+        "expected_resale_price": "100"
+      },
+      "expected_outcome": {"recommendation": "SKIP", "reason_codes": ["OUT_OF_STOCK"]}
+    }
+  ]
+}

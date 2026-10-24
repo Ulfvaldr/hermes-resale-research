@@ -1,0 +1,75 @@
+{
+  "name": "Hermes Daily Candidate Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { mode: 'sample', input_file: 'examples/phase2-demo-candidates.json', limit: 10, research_only: true } }];"
+      },
+      "id": "discover",
+      "name": "Discover candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{ json: { ...item, enrichment: 'fixture-backed', evidence_policy: 'fail-closed', human_approval_required: true } }];"
+      },
+      "id": "research",
+      "name": "Research/enrich",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "command": "python -m hermes_resale_research \"{{$env.HERMES_RESALE_REPO || '.'}}/examples/phase2-demo-candidates.json\" --batch --limit {{$json.limit || 10}}"
+      },
+      "id": "evaluate",
+      "name": "Evaluate batch",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.stdout;\nif (!raw) throw new Error('Evaluate batch returned no stdout; check HERMES_RESALE_REPO and Python availability.');\nlet report;\ntry { report = JSON.parse(raw); } catch (error) { throw new Error(`Evaluate batch returned invalid JSON: ${error.message}`); }\nif (!report.research_only || !report.human_approval_required) throw new Error('Safety contract missing: expected research_only and human_approval_required.');\nreturn [{ json: report }];"
+      },
+      "id": "rank",
+      "name": "Rank",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const report = $input.first().json;\nreturn [{ json: { title: report.title, generated_at: report.generated_at, candidates: report.items, rejected: report.rejected, evaluated_count: report.evaluated_count, research_only: true, human_approval_required: true } }];"
+      },
+      "id": "present",
+      "name": "Present results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 300]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Discover candidates", "type": "main", "index": 0 }]] },
+    "Discover candidates": { "main": [[{ "node": "Research/enrich", "type": "main", "index": 0 }]] },
+    "Research/enrich": { "main": [[{ "node": "Evaluate batch", "type": "main", "index": 0 }]] },
+    "Evaluate batch": { "main": [[{ "node": "Rank", "type": "main", "index": 0 }]] },
+    "Rank": { "main": [[{ "node": "Present results", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "hermes-phase2-demo-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

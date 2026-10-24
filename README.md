@@ -1,6 +1,6 @@
 # Hermes Resale Research
 
-A research-only Phase 1 workflow for evaluating resale opportunities from structured source and marketplace evidence. The repository contains deterministic contracts, policy documents, synthetic fixtures, and a thin optional n8n transport. It does not contain marketplace credentials, cookies, live responses, purchasing automation, listing automation, or dashboard UI.
+A research-only Phase 1 workflow plus a bounded Phase 2 daily candidate batch for evaluating resale opportunities from structured source and marketplace evidence. The repository contains deterministic contracts, policy documents, synthetic fixtures, and an optional local n8n transport. It does not contain marketplace credentials, cookies, live responses, purchasing automation, listing automation, or dashboard UI.
 
 ## Architecture
 
@@ -20,6 +20,11 @@ The Python runtime is the source of truth for identity, freshness, evidence vali
 - `schemas/canonical-phase1-fixture-package.schema.json` — Draft 2020-12 machine-readable schema.
 - `tests/fixtures/canonical_phase1/` — deterministic fixture package and executable contract probe.
 - `examples/manual-evaluation.json` — offline input example.
+- `examples/phase2-demo-candidates.json` — credential-free daily batch fixture.
+- `n8n/workflows/daily-candidate-workflow.json` — importable n8n visual orchestration workflow.
+- `PHASE_2_ARCHITECTURE.md` — Phase 2 component boundary, safety contract, and operating model.
+- `PROJECT_STATUS.md` — current milestone status and known limitations.
+- `HANDOFF.md` — validation-backed handoff and recommended next steps.
 
 ## Quick start
 
@@ -54,6 +59,23 @@ PYTHONPATH=src python -m hermes_resale_research examples/manual-evaluation.json
 
 The result includes identity, per-field freshness, economics, market provenance, score, recommendation, reason codes, and any human recheck requirements. Invalid or missing eBay sold evidence is classified as `UNAVAILABLE`; active asking prices are never substituted for sold prices.
 
+## Daily candidate demo
+
+This is the shortest clone/configure/start/view path. It needs only Python 3.11+ and the standard library; no marketplace credentials or n8n instance is required:
+
+```bash
+cp config/.env.example .env             # optional; keep real secrets local
+PYTHONPATH=src python -m hermes_resale_research examples/phase2-demo-candidates.json --batch --limit 10 --markdown
+```
+
+The report is titled `Today's Resale Opportunity Candidates`. It shows ranked evidence-backed items and a rejected audit section. `research_only` and `human_approval_required` are always true; this repository has no purchase or listing command.
+
+### Batch output contract
+
+Batch JSON contains `title`, `generated_at`, `bounded_limit`, `candidate_count`, `evaluated_count`, `items`, `rejected`, `research_only`, and `human_approval_required`. Each presented item includes the candidate/product identity, source store and price, expected resale price, estimated net profit, ROI, break-even price, recommendation, confidence, evidence quality, explanation, failed gates, reason codes, source provenance, resale provenance, `eligible`, and `human_approval_required`. Rejected candidates remain in the audit list and are never presented as eligible.
+
+The batch path is fail-closed: duplicate IDs are deterministically deduplicated, malformed candidates become rejected `SKIP` records, missing or invalid sold evidence cannot produce a buy recommendation, stale critical observations route to `RECHECK`/`SKIP`, and active asking prices are never substituted for completed-sale evidence. A `BUY_CANDIDATE` still requires a final source price and stock recheck before purchase.
+
 ## Optional n8n integration
 
 The `--n8n` path is transport only. It sends the input JSON object unchanged to an existing local n8n webhook; it does not execute or duplicate the deterministic resale workflow:
@@ -62,7 +84,11 @@ The `--n8n` path is transport only. It sends the input JSON object unchanged to 
 PYTHONPATH=src python -m hermes_resale_research --n8n examples/manual-evaluation.json
 ```
 
-This repository does not include an n8n workflow definition or import/export instructions. The intended local endpoint and workflow must already exist before using this mode.
+For visual orchestration, import `n8n/workflows/daily-candidate-workflow.json` into a local n8n instance. The workflow is `Trigger -> Discover candidates -> Research/enrich -> Evaluate batch -> Rank -> Present results`. Set the n8n process environment variables `HERMES_RESALE_REPO` to the absolute repository path and `PYTHONPATH` to `<repo>/src`, then run it manually. The Evaluate batch node invokes the Python application; n8n only transports status and presentation data. If it cannot run the command, the node error names the missing repository/Python setup. n8n's Execute Command node must be enabled (it is commonly disabled in hosted or queue-mode deployments).
+
+The imported workflow is sample-mode by design and uses `examples/phase2-demo-candidates.json`. Replace the discovery/enrichment adapter only with an approved evidence source; do not put scoring, freshness, identity, economics, or recommendation rules into n8n.
+
+The actual node behavior is: `Trigger` starts a manual run; `Discover candidates` selects the sample file and limit; `Research/enrich` marks fixture-backed, fail-closed evidence handling; `Evaluate batch` runs `python -m hermes_resale_research <repo>/examples/phase2-demo-candidates.json --batch --limit <limit>`; `Rank` parses stdout JSON and refuses a missing safety contract; and `Present results` emits the title, timestamp, ranked candidates, rejected audit, counts, and safety flags. The workflow is inactive on import and is not a live source connector. Hosted/queue-mode n8n commonly disables Execute Command, so this path requires a permitted self-hosted/local n8n execution environment.
 
 Configuration is available in `config/.env.example`:
 
@@ -91,9 +117,15 @@ The canonical runtime test replays every fixture through the documented CLI and 
 
 ## Limitations and next steps
 
-- The n8n workflow is an external local prerequisite, not a repository artifact.
+- The included n8n workflow is a local/self-hosted demo and requires Execute Command permission; hosted n8n is not supported by this path.
 - Synthetic fixtures do not represent live market conditions.
 - Sold-market evidence remains a manually supplied or separately approved input.
 - Human review is required before acting on any recommendation.
+- A live n8n import/execution was not performed during Phase 2 validation; the artifact, node shape, command path, and local CLI were validated instead.
+- Live source adapters remain outside the bounded milestone. Configure optional credentials only after reviewing provider terms, permitted use, and evidence provenance requirements.
 
-Future work can add approved evidence providers or a versioned n8n workflow export, provided the deterministic Python runtime remains authoritative and secrets stay outside the repository. See `PROJECT_STATUS.md` and `HANDOFF.md` for the current closeout state.
+Future work can add approved evidence providers, provided the deterministic Python runtime remains authoritative and secrets stay outside the repository. See `PROJECT_STATUS.md` and `HANDOFF.md` for the current closeout state.
+
+## Human approval gate
+
+This working tree is intentionally uncommitted and unpushed. Do not merge, push, publish, purchase, list, or otherwise operationalize recommendations without explicit human approval. A human must review evidence, identity, freshness, economics, provenance, and the final source price/stock before any external action.

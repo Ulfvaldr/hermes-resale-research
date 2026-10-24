@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import Enum
 from pathlib import Path
 from .workflow import evaluate_opportunity
+from .batch import evaluate_batch, render_markdown
 from .n8n_client import post_evaluation
 
 def _json(value):
@@ -19,11 +20,20 @@ def _json(value):
     return value
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate a manual source candidate against eBay resale evidence")
-    parser.add_argument("input", type=Path, help="JSON with source_candidate, resale_evidence, assumptions, optional now")
+    parser = argparse.ArgumentParser(description="Evaluate resale candidates")
+    parser.add_argument("input", type=Path, help="Single Phase 1 JSON or batch JSON with candidates")
     parser.add_argument("--n8n", action="store_true", help="POST the input JSON contract to the configured local n8n webhook")
+    parser.add_argument("--batch", action="store_true", help="Evaluate a bounded candidate batch")
+    parser.add_argument("--limit", type=int, default=10, help="Maximum candidates to evaluate in batch mode")
+    parser.add_argument("--markdown", action="store_true", help="Render batch output as Markdown")
     args = parser.parse_args()
     payload = json.loads(args.input.read_text(encoding="utf-8"))
+    if args.batch or "candidates" in payload:
+        timestamp = payload.get("now") or payload.get("demo_now")
+        now = datetime.fromisoformat(timestamp.replace("Z", "+00:00")) if timestamp else None
+        report = evaluate_batch(payload.get("candidates", []), payload.get("assumptions"), now=now, limit=args.limit)
+        print(render_markdown(report) if args.markdown else json.dumps(_json(report), indent=2, sort_keys=True))
+        return
     if args.n8n:
         print(json.dumps(post_evaluation(payload).as_dict(), separators=(",", ":"), sort_keys=True))
         return
