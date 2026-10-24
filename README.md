@@ -54,3 +54,20 @@ once from the centralized recommendation path. The regression test
 `tests/test_canonical_runtime.py` replays every canonical fixture through the documented
 CLI and compares both recommendation and reason-code outputs; it intentionally does
 not call the fixture contract probe.
+
+Local n8n handoff
+
+The optional `--n8n` mode sends the input JSON object unchanged to the local
+n8n webhook. It does not run or duplicate the deterministic resale workflow. The
+repository does not include an n8n workflow definition or export/import instructions;
+the published local n8n endpoint and workflow must already exist before using this mode:
+
+    PYTHONPATH=src python -m hermes_resale_research --n8n examples/manual-evaluation.json
+
+The default endpoint is `http://localhost:5678/webhook/hermes-resale-evaluate`.
+Set `N8N_RESALE_WEBHOOK_URL` and optionally `N8N_RESALE_TIMEOUT_SECONDS` in the
+environment to override it. The compact output is `{ok, status_code, data}` on
+valid JSON responses, or `{ok, status_code, error}` with a stable error code
+(`CONNECTION_ERROR`, `HTTP_ERROR`, `MALFORMED_RESPONSE`, or
+`INVALID_PAYLOAD`). n8n must return JSON; no credentials or secrets are sent
+by this client beyond the supplied contract.
