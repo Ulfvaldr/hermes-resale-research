@@ -7,6 +7,7 @@ import json
 import mimetypes
 from decimal import Decimal, InvalidOperation
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -48,6 +49,13 @@ def _interpreter_candidates() -> list[Path]:
     for directory in (ROOT / ".venv", ROOT / "venv", ROOT / "env"):
         candidates.extend((directory / "Scripts" / "python.exe", directory / "bin" / "python"))
 
+    # Hermes exposes its managed Python first on PATH.  Prefer an ordinary
+    # system python before considering the interpreter that imported this
+    # module, which may itself be Hermes' bundled runtime.
+    for executable_name in ("python3", "python"):
+        executable = shutil.which(executable_name)
+        if executable:
+            candidates.append(Path(executable))
     candidates.append(Path(sys.executable))
     return candidates
 

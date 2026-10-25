@@ -5,7 +5,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 from hermes_resale_research.n8n_client import N8nResponse
-from hermes_resale_research.viewer import load_report, render, run_research
+from hermes_resale_research.viewer import (
+    ROOT,
+    SRC,
+    _project_interpreter,
+    demo_report,
+    load_report,
+    render,
+    run_research,
+)
 
 
 class ViewerContractTests(unittest.TestCase):
@@ -63,6 +71,29 @@ class ViewerContractTests(unittest.TestCase):
             path = Path(directory) / "report.json"
             path.write_text(json.dumps(self.report), encoding="utf-8")
             self.assertEqual(load_report(path)["items"][0]["product_name"], "First")
+
+    def test_project_interpreter_skips_hermes_runtime(self):
+        hermes = Path("/hermes/tools/python.exe")
+        project = Path("/project/.venv/bin/python")
+        with patch("hermes_resale_research.viewer._interpreter_candidates", return_value=[hermes, project]):
+            with patch.object(Path, "is_file", return_value=True):
+                self.assertEqual(_project_interpreter(), project.resolve())
+
+    @patch("hermes_resale_research.viewer.subprocess.run")
+    @patch("hermes_resale_research.viewer._project_interpreter")
+    def test_demo_report_uses_project_interpreter_and_explicit_source_path(self, interpreter, run):
+        project_python = ROOT / ".venv" / "Scripts" / "python.exe"
+        interpreter.return_value = project_python
+        run.return_value.returncode = 0
+        run.return_value.stdout = json.dumps(self.report)
+        run.return_value.stderr = ""
+        with patch.dict("os.environ", {"PYTHONPATH": "existing-source"}, clear=True):
+            self.assertEqual(demo_report(), self.report | {"demo_mode": True})
+        command, kwargs = run.call_args
+        self.assertEqual(command[0][0], str(project_python))
+        self.assertEqual(command[0][1:3], ["-m", "hermes_resale_research"])
+        self.assertEqual(kwargs["cwd"], ROOT)
+        self.assertEqual(kwargs["env"]["PYTHONPATH"], str(SRC) + ";existing-source")
 
     @patch("hermes_resale_research.viewer.demo_report")
     def test_run_research_demo_delegates_to_phase_two(self, demo):
