@@ -54,7 +54,7 @@ Open `http://127.0.0.1:8765/`. In `--report` mode the viewer reads exactly one p
 }
 ```
 
-The full envelope and item fields are defined in `docs/phase2-viewer-data-contract.md`. The viewer displays the `items` array in the order supplied by Phase 2 and assigns a 1-based display rank. It does not sort by profit or ROI. Numeric values are displayed as supplied; they are not recomputed.
+The full envelope and item fields are defined in `docs/phase2-viewer-data-contract.md`. The viewer displays the `items` array in the order supplied by Phase 2 and assigns a 1-based display rank. It does not sort by profit or ROI. Currency fields are formatted as dollars with two decimals and ROI is shown as a percentage for readability; the backend values remain unchanged and are not recomputed.
 
 ## Understanding the page
 

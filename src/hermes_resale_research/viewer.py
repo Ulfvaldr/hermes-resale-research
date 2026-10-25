@@ -5,6 +5,7 @@ import argparse
 import html
 import json
 import mimetypes
+from decimal import Decimal, InvalidOperation
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -52,12 +53,57 @@ def _value(item: dict, key: str) -> str:
     return html.escape(str(value))
 
 
-def _list(value: object) -> str:
-    if not value:
-        return "None"
-    if isinstance(value, list):
-        return html.escape(", ".join(str(v) for v in value))
+_CURRENCY_FIELDS = {"source_price", "expected_resale_price", "estimated_net_profit", "break_even_price"}
+_REASON_EXPLANATIONS = {
+    "ALL_REQUIRED_GATES_PASS": "All required checks passed",
+    "SOLD_COUNT_BELOW_MINIMUM": "There are not enough sold examples to meet the minimum evidence requirement",
+}
+
+
+def _number(value: object) -> Decimal | None:
+    """Parse a display value without changing the report's underlying value."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return Decimal(str(value).replace("$", "").replace(",", "").strip())
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _currency(value: object) -> str:
+    number = _number(value)
+    return f"${number:,.2f}" if number is not None else str(value)
+
+
+def _roi(value: object) -> str:
+    number = _number(value)
+    if number is None:
+        return str(value)
+    percent = format(number * 100, "f").rstrip("0").rstrip(".")
+    return f"{percent}%"
+
+
+def _reason(code: object) -> str:
+    text = str(code)
+    return _REASON_EXPLANATIONS.get(text, text.replace("_", " ").capitalize())
+
+
+def _display(item: dict, key: str) -> str:
+    value = item.get(key)
+    if value is None or value == "":
+        return "Unavailable"
+    if key in _CURRENCY_FIELDS:
+        value = _currency(value)
+    elif key == "roi":
+        value = _roi(value)
     return html.escape(str(value))
+
+
+def _reasons(item: dict) -> str:
+    codes = item.get("reason_codes") or item.get("failed_gates") or []
+    if not isinstance(codes, list):
+        codes = [codes]
+    return "<br>".join(html.escape(_reason(code)) for code in codes) or "Unavailable"
 
 
 def _details(item: dict) -> str:
@@ -72,17 +118,17 @@ def _card(item: dict, rank: int) -> str:
     return f"""<article class="card">
       <div class="rank">#{rank}</div><div class="card-main">
       <div class="heading"><h2>{_value(item, 'product_name')}</h2><span class="badge">{rec}</span></div>
-      <p class="source">{_value(item, 'source_store')} · Source price: <strong>{_value(item, 'source_price')}</strong></p>
-      <div class="metrics"><div><small>Estimated net profit</small><strong>{_value(item, 'estimated_net_profit')}</strong></div>
-      <div><small>ROI</small><strong>{_value(item, 'roi')}</strong></div><div><small>Confidence</small><strong>{_value(item, 'confidence')}</strong></div>
+      <p class="source">{_value(item, 'source_store')} · Source price: <strong>{_display(item, 'source_price')}</strong></p>
+      <div class="metrics"><div><small>Estimated net profit</small><strong>{_display(item, 'estimated_net_profit')}</strong></div>
+      <div><small>ROI</small><strong>{_display(item, 'roi')}</strong></div><div><small>Confidence</small><strong>{_value(item, 'confidence')}</strong></div>
       <div><small>Evidence quality</small><strong>{_value(item, 'evidence_quality')}</strong></div></div>
-      <dl><dt>Expected resale price</dt><dd>{_value(item, 'expected_resale_price')}</dd><dt>Break-even price</dt><dd>{_value(item, 'break_even_price')}</dd>
-      <dt>Explanation</dt><dd>{_value(item, 'explanation')}</dd></dl>{_details(item)}</div></article>"""
+      <dl><dt>Expected resale price</dt><dd>{_display(item, 'expected_resale_price')}</dd><dt>Break-even price</dt><dd>{_display(item, 'break_even_price')}</dd>
+      <dt>Explanation</dt><dd>{_value(item, 'explanation')}</dd><dt>Reason</dt><dd>{_reasons(item)}</dd></dl>{_details(item)}</div></article>"""
 
 
 def render(report: dict) -> str:
     cards = "".join(_card(item, rank) for rank, item in enumerate(report["items"], 1))
-    rejected = "".join(_card(item, rank) for rank, item in enumerate(report["rejected"], 1)) or "<p>No rejected or skipped candidates.</p>"
+    rejected = "".join(f'<details class="audit-record"><summary>{html.escape(str(item.get("product_name", "Rejected or skipped candidate")))}</summary>{_card(item, rank)}</details>' for rank, item in enumerate(report["rejected"], 1)) or "<p>No rejected or skipped candidates.</p>"
     mode = "CREDENTIAL-FREE SYNTHETIC DEMO" if report.get("demo_mode") else "LOCAL REPORT"
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(str(report.get('title', "Today's Resale Opportunity Candidates")))}</title><style>

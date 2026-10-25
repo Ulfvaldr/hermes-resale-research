@@ -28,6 +28,24 @@ class ViewerContractTests(unittest.TestCase):
         self.assertIn("Skipped", page)
         self.assertIn("Evidence and provenance", page)
 
+    def test_render_formats_presentation_values_and_explains_reasons(self):
+        self.report["items"][0].update({
+            "source_price": "21",
+            "expected_resale_price": "72.00",
+            "estimated_net_profit": "40",
+            "break_even_price": "30.5",
+            "roi": "0.60",
+            "reason_codes": ["ALL_REQUIRED_GATES_PASS"],
+        })
+        self.report["rejected"][0].update({"estimated_net_profit": "10", "roi": "1.40", "reason_codes": ["SOLD_COUNT_BELOW_MINIMUM"]})
+        page = render(self.report)
+        for value in ("$21.00", "$72.00", "$40.00", "$30.50", "60%", "140%"):
+            self.assertIn(value, page)
+        self.assertIn("All required checks passed", page)
+        self.assertIn("There are not enough sold examples", page)
+        self.assertIn("ALL_REQUIRED_GATES_PASS", page)
+        self.assertIn('class="audit-record"', page)
+        self.assertNotIn('<details class="audit-record" open', page)
     def test_load_rejects_unsafe_report(self):
         unsafe = dict(self.report, research_only=False)
         with tempfile.TemporaryDirectory() as directory:
